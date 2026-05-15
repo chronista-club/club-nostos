@@ -1,0 +1,22 @@
+[package]
+name = "club-nostos"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Bracket / lifecycle / Outcome primitives for Rust. Climb the ladder of abstraction, then come back down with new eyes."
+keywords = ["bracket", "lifecycle", "outcome", "adt", "graph"]
+categories = ["rust-patterns", "data-structures"]
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+rust-version.workspace = true
+
+# crates.io publication name = `club-nostos` (chronista-club ecosystem convention)。
+# Rust crate identifier = `club_nostos` (full rename policy、 unison v0.6.0 と整合)。
+# Convention sources: creo-memories `mem_1Cb2haX6ZicuCweEpxAvj4`、 nostos namespace map v3 (`mem_1Cb38zYeRCRBDYWH29VZQq`)
+[lib]
+name = "club_nostos"
+path = "src/lib.rs"
+
+[dependencies]

@@ -1,0 +1,44 @@
+# Rust
+/target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.pdb
+
+# Temporary files
+*.tmp
+*.temp
+
+# Logs
+*.log
+
+# Local development
+.env
+.env.local
+
+# Local files (exclude all *.local.* files)
+*.local.*
+
+# Cargo local configuration (macOS linker settings)
+.cargo/config.toml
+
+# MCP configuration (local)
+.mcp.json
+
+# Serena MCP server cache
+.serena/
+.vantage/
+
+# Git worktrees
+.worktrees/

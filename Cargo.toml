@@ -1,0 +1,24 @@
+[workspace]
+members = [
+    "crates/nostos-core",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Mako<mito@chronista.club>"]
+license = "MIT"
+homepage = "https://github.com/chronista-club/club-nostos"
+repository = "https://github.com/chronista-club/club-nostos"
+rust-version = "1.95"
+
+[workspace.dependencies]
+
+[profile.dev]
+split-debuginfo = "unpacked"
+codegen-units = 256
+
+[profile.test]
+split-debuginfo = "unpacked"
+codegen-units = 256
