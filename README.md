@@ -24,9 +24,9 @@
 | GitHub repo | `chronista-club/club-nostos` |
 | Local checkout (Finder discoverability) | `~/repos/club-nostos/` |
 | crates.io publication | `club-nostos` |
-| Rust crate identifier (`use ...`) | `club_nostos` |
+| Rust crate identifier (`use ...`) | `nostos` |
 
-> chronista-club ecosystem の **`club-` prefix 命名規則** (2026-05-15 確立、 unison v0.4.2 → v0.5.0 rename 起点)、 および unison v0.6.0 で採択された **full rename policy** に従います。
+> chronista-club ecosystem の **`club-` prefix 命名規則** に従います。 prefix は crates.io / GitHub / Finder に listed される識別子 (package・repo・local dir) に付き、 lib 名は bare name (`nostos`) です。 詳細は [chronista-club CONVENTIONS.md](https://github.com/chronista-club/.github/blob/main/CONVENTIONS.md)。
 
 ## Concept
 
@@ -40,7 +40,7 @@
 club-nostos/
 ├── Cargo.toml              # workspace root
 ├── crates/
-│   └── nostos-core/        # 公開 crate: club-nostos (lib = club_nostos)
+│   └── nostos-core/        # 公開 crate: club-nostos (lib = nostos)
 │       ├── Cargo.toml
 │       └── src/lib.rs
 ├── docs/

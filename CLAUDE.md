@@ -15,7 +15,7 @@ ADR-0001 (bracket + Outcome ADT) が `proposed` 段階で、 具体 signature �
 
 ## 命名規則 (chronista-club ecosystem)
 
-`club-` prefix + **full rename policy** (unison v0.6.0 で確立) に従う。
+`club-` prefix 命名規則に従う。 prefix は crates.io / GitHub / Finder に listed される識別子に付き、 **lib 名は bare name** (例: `nostos`)。
 
 | Layer | Name |
 |-------|------|
@@ -24,9 +24,9 @@ ADR-0001 (bracket + Outcome ADT) が `proposed` 段階で、 具体 signature �
 | GitHub repo | `chronista-club/club-nostos` |
 | local checkout | `~/repos/club-nostos/` |
 | crates.io package | `club-nostos` |
-| Rust crate identifier (`use ...`) | `club_nostos` |
+| Rust crate identifier (`use ...`) | `nostos` |
 
-新規 crate を足す時も `[package].name = "club-<name>"` / `[lib].name = "club_<name>"` で統一する。
+新規 crate を足す時は `[package].name = "club-<name>"` / `[lib].name = "<name>"` (bare、 prefix なし) とする。
 
 ## アーキテクチャ scope
 
