@@ -19,7 +19,8 @@ ADR-0001 (bracket + Outcome ADT) が `proposed` 段階で、 具体 signature �
 
 | Layer | Name |
 |-------|------|
-| atlas / 内部呼称 | `nostos` |
+| creo-memories atlas | `Nostos Club` (display label、 prefix 軸の例外) |
+| 内部呼称 (project 通称) | `nostos` |
 | GitHub repo | `chronista-club/club-nostos` |
 | local checkout | `~/repos/club-nostos/` |
 | crates.io package | `club-nostos` |
@@ -53,5 +54,5 @@ cargo fmt --all -- --check
 
 ## creo-memories
 
-- atlas: `nostos` (`atl_1Cb35Uxd7zymxS6e38hJ23`)
+- atlas: `Nostos Club` (`atl_1Cb35Uxd7zymxS6e38hJ23`)
 - 起点 memory: founding decision `mem_1Cb35YiGHG1f7UdXyyt16L` / priority advisory `mem_1Cb39WrS5tfUsaMV8yzsLR` / scaffold landing `mem_1Cb5v4CDxEovtuStmhts7u`
