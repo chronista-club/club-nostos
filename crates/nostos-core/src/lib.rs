@@ -15,9 +15,11 @@
 //!
 //! ## Status — `v0.1.0`
 //!
-//! [`Outcome`] ADT を実装済み ([ADR-0002])。 `Bracket` trait (ADR-0001 Axis A) は後続。
+//! [`Outcome`] ADT ([ADR-0002]) と loop driver [`drive`] / [`drive_bounded`] ([ADR-0003])
+//! を実装済み。 `Bracket` trait (ADR-0001 Axis A) は後続。
 //!
 //! [ADR-0002]: https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0002-outcome-adt.md
+//! [ADR-0003]: https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0003-lifecycle-loop-dual.md
 
 #![no_std]
 #![warn(missing_docs)]
@@ -26,6 +28,8 @@
 #[cfg(test)]
 extern crate std;
 
+pub mod drive;
 pub mod outcome;
 
+pub use drive::{drive, drive_bounded};
 pub use outcome::{Cycle, Outcome};
