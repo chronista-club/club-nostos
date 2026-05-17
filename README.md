@@ -6,15 +6,23 @@
 
 ## Status
 
-`v0.1.0` — **founding scaffold**。 trait の実装は [ADR-0001](docs/adr/0001-bracket-and-outcome.md) 確定後に着手します。
+`v0.1.0` — **core primitives 実装済み**。 Outcome ADT・loop driver・`Bracket` / `Driver` trait が使えます。
+
+```rust
+use nostos::{Outcome, Cycle, drive, drive_bounded, Bracket, Driver};
+```
+
+設計の議事録は [`docs/adr/`](docs/adr/) ── ADR-0001 が 5 axes を framing し、 ADR-0002〜0004 が core 3 axes を decide。
 
 ## Scope
 
-- **Bracket primitive** ── 状態遷移の `enter` / `active` / `exit` を trait として表現
-- **Outcome ADT** ── 帰還の三相: `Done(O)` / `Reborn(I)` / `Fail(E)`
-- **Lifecycle ↔ loop dual view** ── 単発実行と反復実行の切替を同一 substrate 上で
-- **Node graph editor との同型 substrate** ── visual programming の back-end として直接 mapping
-- **CGP-style component composition** ── Context-Generic Programming による実行戦略の遅延 inject
+ADR-0001 が 5 つの設計 axis を framing しました。 現状:
+
+- ✅ **Outcome ADT** ── 帰還の三相: `Done(O)` / `Reborn(I)` / `Failed(E)` ([ADR-0002](docs/adr/0002-outcome-adt.md))
+- ✅ **Lifecycle ↔ loop dual view** ── 単発実行と反復実行を同一 substrate 上で ([ADR-0003](docs/adr/0003-lifecycle-loop-dual.md))
+- ✅ **Bracket primitive** ── 状態遷移の `enter` / Active / `exit` を trait として表現 ([ADR-0004](docs/adr/0004-bracket-and-driver.md))
+- ⬜ **Node graph editor との同型 substrate** ── visual programming の back-end (後続・別 crate 想定)
+- ⬜ **CGP-style component composition** ── 実行戦略の遅延 inject (後続・別 crate 想定)
 
 ## Naming
 
@@ -42,10 +50,14 @@ club-nostos/
 ├── crates/
 │   └── nostos-core/        # 公開 crate: club-nostos (lib = nostos)
 │       ├── Cargo.toml
-│       └── src/lib.rs
+│       └── src/
+│           ├── lib.rs
+│           ├── outcome.rs  # Outcome ADT (ADR-0002)
+│           ├── drive.rs    # loop driver (ADR-0003)
+│           ├── bracket.rs  # Bracket trait (ADR-0004)
+│           └── driver.rs   # Driver trait (ADR-0004)
 ├── docs/
-│   └── adr/                # Architecture Decision Records
-│       └── 0001-bracket-and-outcome.md
+│   └── adr/                # Architecture Decision Records (0001〜0004)
 └── .github/workflows/      # CI (fmt / clippy / test)
 ```
 

@@ -1,6 +1,6 @@
 # ADR-0001 — Bracket trait と Outcome ADT の最初の議事録
 
-> **Status**: `proposed` (= 議論の入口、 具体 signature は後続 ADR で決定)
+> **Status**: `accepted` (2026-05-17 — 5 axes framing が後続 ADR で検証された)
 > **Date**: 2026-05-16
 > **Deciders**: mito (with claude Opus 4.7 as conversation partner)
 > **Supersedes**: ──
@@ -129,4 +129,4 @@ flowchart LR
 
 ---
 
-> 本 ADR は draft 段階。 review と議論を経て `accepted` に昇格させます。
+> **昇格** (2026-05-17): 5 axes の framing は後続 ADR で検証された ── Axis B → [ADR-0002](0002-outcome-adt.md)、 Axis C → [ADR-0003](0003-lifecycle-loop-dual.md)、 Axis A → [ADR-0004](0004-bracket-and-driver.md) で `accepted`・実装済み。 上記 Open Questions 1-3 も ADR-0002 で解決 (命名は `Failed` / MSRV `1.95` / `no_std` 対応)。 Axis D (graph 同型) / Axis E (CGP) は予定通り後続 (別 crate 想定)。 深掘り順序の提案も実際の進行と一致した。 本 ADR を `accepted` に昇格。

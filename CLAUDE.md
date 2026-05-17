@@ -8,10 +8,12 @@
 - **Legacy は残さない**: deprecated / 後方互換のためだけの実装は不要。 不要なコードは削除する
 - **Minimum を保つ**: 必要最小限の状態を維持する。 過剰な抽象化を避ける
 
-## 現状 — `v0.1.0` founding scaffold
+## 現状 — `v0.1.0` core 実装済み
 
-trait 実装は未着手。 設計判断は `docs/adr/` に記録してから着手する。
-ADR-0001 (bracket + Outcome ADT) が `proposed` 段階で、 具体 signature は後続 ADR で個別に深掘る。
+ADR-0001 が 5 axes を framing。 core 3 axes は `accepted`・実装済み:
+ADR-0002 (Outcome ADT) / ADR-0003 (loop driver) / ADR-0004 (Bracket・Driver trait)。
+Axis D (graph 同型) / Axis E (CGP) は後続 (別 crate 想定)。
+新しい設計判断は `docs/adr/` に記録してから着手する。
 
 ## 命名規則 (chronista-club ecosystem)
 
