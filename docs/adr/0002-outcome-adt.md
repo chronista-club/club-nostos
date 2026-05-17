@@ -30,9 +30,11 @@ pub enum Outcome<O, I, E> {
 |---------|------|----|
 | `Done(O)` | 旅が完了し、 成果を持ち帰った | 成果 `O` |
 | `Reborn(I)` | 変容を経て次の生へ ── 帰還の core meaning | 次回入力 `I` |
-| `Failed(E)` | 失敗 | エラー `E` |
+| `Failed(E)` | 帰還が成果に至らず終端した | 終端理由 `E` |
 
 `Pending` / `Cancelled` / `Suspended` 等は **core に入れない**。 nostos の Outcome は 「帰還が完了した三相」 を表す型であり、 「まだ帰っていない」 状態は別の関心事 (Bracket の `Active` 側、 もしくは別 ADT)。 core を 3 variant に保つ。
+
+> **`Failed(E)` の意味論** (creoui F-3 を受けて明記): `E` は 「error」 に限定されない **「終端理由」** である。 実行エラーだけでなく、 **user 起因の cancel / discard** も `Failed` に含まれる。 consumer は `E` を自分の語彙で定義してよい (例: creoui Editor Mode は `Failed(DiscardReason)` とし、 `DiscardReason::user-cancelled` を持たせる)。 「中止」 を別 variant にしないのは、 nostos から見れば 「成果に至らず終端した」 点で error と cancel は同一の相だから。
 
 ### D2 — generic parameter は 3 つ `<O, I, E>` + `Cycle` alias
 
