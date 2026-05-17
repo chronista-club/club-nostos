@@ -19,7 +19,7 @@ ADR-0001 (bracket + Outcome ADT) が `proposed` 段階で、 具体 signature �
 
 | Layer | Name |
 |-------|------|
-| creo-memories atlas | `Nostos Club` (display label、 prefix 軸の例外) |
+| creo-memories atlas | name `nostos`、 display name `Nostos Club` |
 | 内部呼称 (project 通称) | `nostos` |
 | GitHub repo | `chronista-club/club-nostos` |
 | local checkout | `~/repos/club-nostos/` |
@@ -31,7 +31,7 @@ ADR-0001 (bracket + Outcome ADT) が `proposed` 段階で、 具体 signature �
 ## アーキテクチャ scope
 
 - **Bracket** — `enter` / `active` / `exit` の lifecycle primitive
-- **Outcome ADT** — `Done(O)` / `Reborn(I)` / `Fail(E)` の帰還三相
+- **Outcome ADT** — `Done(O)` / `Reborn(I)` / `Failed(E)` の帰還三相
 - lifecycle ↔ loop dual view / node graph editor との同型 substrate / CGP-style component composition
 
 詳細と設計 axes は [`docs/adr/0001-bracket-and-outcome.md`](docs/adr/0001-bracket-and-outcome.md)。
@@ -54,5 +54,5 @@ cargo fmt --all -- --check
 
 ## creo-memories
 
-- atlas: `Nostos Club` (`atl_1Cb35Uxd7zymxS6e38hJ23`)
+- atlas: name `nostos` / display name `Nostos Club` (`atl_1Cb35Uxd7zymxS6e38hJ23`)
 - 起点 memory: founding decision `mem_1Cb35YiGHG1f7UdXyyt16L` / priority advisory `mem_1Cb39WrS5tfUsaMV8yzsLR` / scaffold landing `mem_1Cb5v4CDxEovtuStmhts7u`
