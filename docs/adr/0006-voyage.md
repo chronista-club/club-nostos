@@ -1,6 +1,6 @@
 # ADR-0006 — Voyage: 往相の獲得 (OneWay | RoundTrip)
 
-> **Status**: `proposed` (= draft、 review 待ち)
+> **Status**: `accepted` (2026-05-18、 review PR #1 完了)
 > **Date**: 2026-05-17
 > **Deciders**: mito (with claude Opus 4.7 as conversation partner)
 > **Refines**: [ADR-0001](0001-bracket-and-outcome.md) (5 axes の外に出る新方向) / [ADR-0002](0002-outcome-adt.md) (Outcome ADT)
@@ -78,12 +78,15 @@ Bracket を OneWay-aware にする (例: `exit` が `Voyage` を返す) のは�
 
 - 拡散 (`Spread`) は本 ADR の scope 外 ── nostos-graph / [ADR-0005](0005-graph-substrate.md) が扱う
 
-## Open Questions
+## Resolved Questions
 
-1. **頂点型の名** ── `Voyage` で確定か。 代替: `往還` (字で二相を含むが `OneWay` 側は字義上 「還」 を裏切る) / `Passage` / `Fate`。 本 ADR の第一 review point
-2. **`OneWay` の将来 payload** ── 現状 bare で確定。 往相が値を持つ必要が将来 core レベルで生じたら、 bare → generic は後方非互換 ── その時点で別 ADR。 founding 段階では over-engineering しない
-3. **`Driver` と `Voyage`** ── lifecycle / loop の Driver ([ADR-0004](0004-bracket-and-driver.md)) は `Outcome` を駆動する。 OneWay-only の Driver が要るか、 Driver は還相専用かは未決 ── consumer signal を待つ
+1. **頂点型の名** → `Voyage` で確定 (review PR #1、 2026-05-18)。 旅は還るとは限らず `OneWay` を字義的に裏切らない。 加えて Odyssey との韻 ── νόστος は voyage の *還る相*であり、 apex 型 `Voyage` が `RoundTrip` arm に `Outcome`(=nostos) を内包する構造が、 原典で 「オデュッセイア (voyage) が nostos (帰還) を内包する」 入れ子と一致する。
+
+## Open Questions (後続)
+
+1. **`OneWay` の将来 payload** ── 現状 bare で確定。 往相が値を持つ必要が将来 core レベルで生じたら、 bare → generic は後方非互換 ── その時点で別 ADR。 founding 段階では over-engineering しない
+2. **`Driver` と `Voyage`** ── lifecycle / loop の Driver ([ADR-0004](0004-bracket-and-driver.md)) は `Outcome` を駆動する。 OneWay-only の Driver が要るか、 Driver は還相専用かは未決 ── consumer signal を待つ
 
 ---
 
-> 本 ADR は draft 段階。 Open Questions を review で詰めてから `accepted` に昇格する。
+> **昇格** (2026-05-18): review (PR #1) で頂点型の名 `Voyage` を確定 (OQ1 解決)。 `Outcome` 不可侵・`Bracket` 据え置きの昇華構造を nostos lead が承認。 本 ADR を `accepted` に昇格。 残る Open Questions は後続の deepening 事項。

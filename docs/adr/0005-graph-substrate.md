@@ -1,6 +1,6 @@
 # ADR-0005 — Axis D: graph 同型 substrate
 
-> **Status**: `proposed` (= draft、 review 待ち)
+> **Status**: `accepted` (2026-05-18、 review PR #1 完了)
 > **Date**: 2026-05-17
 > **Deciders**: mito (with claude Opus 4.7 as conversation partner)
 > **Refines**: [ADR-0001](0001-bracket-and-outcome.md) Axis D
@@ -93,6 +93,27 @@ nostos-graph は **semantic substrate のみ**提供する ── visual UI も 
 
 > OneWay を *emit* する node の model ── `Bracket` は `Outcome` のみを返す (ADR-0006 D4) ため、 OneWay は Bracket node の exit からは出ない ── は本 ADR では framing に留める。 OneWay-emitting node 種別の具体は Open Questions 参照。
 
+### D6 — `Graph` は `Node` を実装する (graph の自己入れ子)
+
+graph の入れ子 ── sub-graph を 1 単位として扱う ── は、 別ラッパ型を作らず **`Graph` 型自身が `Node` trait を実装する** ことで表す。
+
+- `Graph` = `Node` の集合 + edge (D1 の有向グラフ)。 そして `impl Node for Graph` ── `Graph` は `Node` でもある
+- ゆえに `Graph` は `Graph` を node として含められる ── 入れ子は design pattern でなく **型の構造そのもの**
+- D2 の `Node` が object-safe な dyn 層であることがここで効く ── 入れ子 graph の中身は dynamic (runtime composition) なので、 static な `Bracket` ではなく `Node` でなければ畳めない
+- "delegation" は `impl Node for Graph` の中身が自分の sub-graph を駆動する、 という 1 実装に閉じる
+
+これで graph の再帰が **三軸**になる:
+
+| 軸 | 機構 | edge / 型の形 |
+|----|------|--------------|
+| 時間 | `Reborn` ── 同じ道を次の周回 | self-loop edge (D5) |
+| 空間 | `OneWay(Spread::Ok)` ── 同じ message を次のホップ | fan-out edge (D5) |
+| 深さ | `Graph` が `Graph` に入る ── scale をまたぐ入れ子 | `Graph: Node` |
+
+設計詳細: `Graph` が `Node` として振る舞うには **境界 (entry / exit port)** の指定が要る ── どの内部 node が graph-as-Node の input を受け、 どの node の Outcome が出力になるか。 `Graph` 型が boundary 情報を保持する。 具体 signature は実装段階で詰める。
+
+ADR タイトル 「graph **同型** substrate」 がここで型レベルに結実する ── substrate の 2 型 `Node` と `Graph` が `Graph: Node` で閉じ、 graph が自己相似になる。
+
 ## Consequences
 
 ### Positive
@@ -116,9 +137,8 @@ nostos-graph は **semantic substrate のみ**提供する ── visual UI も 
 2. **本 ADR の scope** ── ADR-0005 で `Node` trait の具体 signature・graph データ構造まで decide するか、 framing に留め具体は後続 ADR で深掘るか (Axis D は遠い領域、 ADR-0001 が framing ADR だった先例)
 3. **graph 評価戦略** ── graph 全体の駆動を push 型 / pull 型 / topological order のどれにするか。 本 ADR で扱うか後続か
 4. **crate 名** ── package `club-nostos-graph` で確定か
-5. **node の grouping** (D5 関連、 未考慮) ── routing は現状 1 値 → 1 経路 (or fan-out) の単線。 複数 node を 1 単位に束ね、 **group 境界で routing する** 概念は未着手。 group 内 routing と group 間 routing の階層、 group への一括 fan-out、 group を 1 個の合成 Bracket とみなす圧縮 (= sub-graph の bracket 化) 等。 後続 ADR で扱う
-6. **OneWay-emitting node の model** (D5 関連) ── `Bracket` node の exit は `Outcome` のみ (ADR-0006 D4)。 OneWay を graph に注入する node 種別 ── 専用の emitter node か、 `Node` trait 側で `Voyage` を返せるようにするか ── は後続で decide
+5. **OneWay-emitting node の model** (D5 関連) ── `Bracket` node の exit は `Outcome` のみ (ADR-0006 D4)。 OneWay を graph に注入する node 種別 ── 専用の emitter node か、 `Node` trait 側で `Voyage` を返せるようにするか ── は後続で decide
 
 ---
 
-> 本 ADR は draft 段階。 Open Questions を review で詰めてから `accepted` に昇格する。
+> **昇格** (2026-05-18): review (PR #1) で D5 (Voyage 追従) と D6 (`Graph: Node` 自己入れ子) を decide、 ADR-0006 と整合確認。 旧 OQ5 (node grouping) は D6 に昇格・解決。 残る Open Questions 1-5 は実装段階・後続 ADR での deepening 事項。 本 ADR を `accepted` に昇格。
