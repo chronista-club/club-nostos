@@ -1,6 +1,7 @@
 //! `Voyage` ── 往相と還相を併せ持つ頂点型。
 //!
-//! 詳細設計は [ADR-0006](https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0006-voyage.md)。
+//! 詳細設計は [ADR-0006](https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0006-voyage.md)
+//! と [ADR-0008](https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0008-oneway-payload-and-spread.md)。
 
 use crate::Outcome;
 
@@ -13,14 +14,18 @@ use crate::Outcome;
 /// `Outcome` は不可侵 ── `Voyage` は `Outcome` を `RoundTrip` arm に**そのまま内包**
 /// する一段上の型であり、 `Outcome` に 4 つ目の variant を足すものではない (昇華であって改造でない)。
 ///
+/// `OneWay` は payload `O` を持つ (ADR-0008) ── 一方向に *発したもの* を運ぶ。
+/// 「還が無い」 ことと 「payload が無い」 ことは別。
+///
 /// # Examples
 ///
 /// ```
 /// use nostos::{Outcome, Voyage};
 ///
-/// // 一方向 ── 発が telos、 還を持たない。
-/// let notify: Voyage<(), (), ()> = Voyage::OneWay;
+/// // 一方向 ── O を発した、 還を持たない。
+/// let notify: Voyage<&str, (), ()> = Voyage::OneWay("ping");
 /// assert!(notify.is_one_way());
+/// assert_eq!(notify.one_way(), Some("ping"));
 ///
 /// // 往復 ── Outcome を内包する。
 /// let answered: Voyage<i32, i32, ()> = Outcome::Done(42).into();
@@ -28,8 +33,8 @@ use crate::Outcome;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Voyage<O, I, E> {
-    /// 往相 ── 発が telos。 還を持たない一方向 (notification / broadcast 等)。
-    OneWay,
+    /// 往相 ── `O` を一方向に発した。 還を持たない (notification / broadcast 等)。
+    OneWay(O),
     /// 還相 ── 往って還った。 [`Outcome`] 三相を内包する。
     RoundTrip(Outcome<O, I, E>),
 }
@@ -37,7 +42,7 @@ pub enum Voyage<O, I, E> {
 impl<O, I, E> Voyage<O, I, E> {
     /// `OneWay` なら `true`。
     pub fn is_one_way(&self) -> bool {
-        matches!(self, Voyage::OneWay)
+        matches!(self, Voyage::OneWay(_))
     }
 
     /// `RoundTrip` なら `true`。
@@ -45,11 +50,19 @@ impl<O, I, E> Voyage<O, I, E> {
         matches!(self, Voyage::RoundTrip(_))
     }
 
+    /// `OneWay` の発した payload を取り出す。 `RoundTrip` は `None`。
+    pub fn one_way(self) -> Option<O> {
+        match self {
+            Voyage::OneWay(payload) => Some(payload),
+            Voyage::RoundTrip(_) => None,
+        }
+    }
+
     /// `RoundTrip` の内包する [`Outcome`] を取り出す。 `OneWay` は `None`。
     pub fn round_trip(self) -> Option<Outcome<O, I, E>> {
         match self {
             Voyage::RoundTrip(outcome) => Some(outcome),
-            Voyage::OneWay => None,
+            Voyage::OneWay(_) => None,
         }
     }
 }
@@ -67,13 +80,13 @@ mod tests {
 
     #[test]
     fn constructs_one_way_and_round_trip() {
-        let _: Voyage<i32, i32, &str> = Voyage::OneWay;
+        let _: Voyage<i32, i32, &str> = Voyage::OneWay(1);
         let _: Voyage<i32, i32, &str> = Voyage::RoundTrip(Outcome::Done(1));
     }
 
     #[test]
     fn predicates_one_way() {
-        let v: Voyage<i32, i32, &str> = Voyage::OneWay;
+        let v: Voyage<i32, i32, &str> = Voyage::OneWay(9);
         assert!(v.is_one_way());
         assert!(!v.is_round_trip());
     }
@@ -86,11 +99,20 @@ mod tests {
     }
 
     #[test]
+    fn one_way_accessor() {
+        let ow: Voyage<i32, i32, &str> = Voyage::OneWay(9);
+        assert_eq!(ow.one_way(), Some(9));
+
+        let rt: Voyage<i32, i32, &str> = Voyage::RoundTrip(Outcome::Done(1));
+        assert_eq!(rt.one_way(), None);
+    }
+
+    #[test]
     fn round_trip_accessor() {
         let rt: Voyage<i32, i32, &str> = Voyage::RoundTrip(Outcome::Done(1));
         assert_eq!(rt.round_trip(), Some(Outcome::Done(1)));
 
-        let ow: Voyage<i32, i32, &str> = Voyage::OneWay;
+        let ow: Voyage<i32, i32, &str> = Voyage::OneWay(9);
         assert_eq!(ow.round_trip(), None);
     }
 
@@ -106,6 +128,6 @@ mod tests {
         let b = a;
         assert_eq!(a, b);
         assert_eq!(a.clone(), a);
-        assert_ne!(a, Voyage::OneWay);
+        assert_ne!(a, Voyage::OneWay(1));
     }
 }
