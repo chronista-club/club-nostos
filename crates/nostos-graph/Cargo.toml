@@ -1,0 +1,23 @@
+[package]
+name = "club-nostos-graph"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Node graph substrate for nostos — Bracket を node、 Voyage を edge とする有向グラフ。"
+keywords = ["graph", "node", "bracket", "lifecycle", "nostos"]
+categories = ["rust-patterns", "data-structures"]
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+rust-version.workspace = true
+
+# crates.io publication name = `club-nostos-graph` (chronista-club convention)。
+# Rust crate identifier (lib name) = `nostos_graph` ── lib 名は bare name 方針。
+# 詳細: chronista-club CONVENTIONS.md
+[lib]
+name = "nostos_graph"
+path = "src/lib.rs"
+
+[dependencies]
+club-nostos = { path = "../nostos-core" }

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/nostos-core",
+    "crates/nostos-graph",
 ]
 resolver = "2"
 
