@@ -16,11 +16,12 @@
 //! ## Status — `v0.1.0`
 //!
 //! [`Outcome`] ADT ([ADR-0002])、 loop driver [`drive`] / [`drive_bounded`] ([ADR-0003])、
-//! [`Bracket`] / [`Driver`] trait ([ADR-0004]) を実装済み。
+//! [`Bracket`] / [`Driver`] trait ([ADR-0004])、 [`Voyage`] 頂点型 ([ADR-0006]) を実装済み。
 //!
 //! [ADR-0002]: https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0002-outcome-adt.md
 //! [ADR-0003]: https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0003-lifecycle-loop-dual.md
 //! [ADR-0004]: https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0004-bracket-and-driver.md
+//! [ADR-0006]: https://github.com/chronista-club/club-nostos/blob/main/docs/adr/0006-voyage.md
 
 #![no_std]
 #![warn(missing_docs)]
@@ -33,8 +34,10 @@ pub mod bracket;
 pub mod drive;
 pub mod driver;
 pub mod outcome;
+pub mod voyage;
 
 pub use bracket::Bracket;
 pub use drive::{drive, drive_bounded};
 pub use driver::Driver;
 pub use outcome::{Cycle, Outcome};
+pub use voyage::Voyage;
