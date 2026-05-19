@@ -8,11 +8,13 @@
 - **Legacy は残さない**: deprecated / 後方互換のためだけの実装は不要。 不要なコードは削除する
 - **Minimum を保つ**: 必要最小限の状態を維持する。 過剰な抽象化を避ける
 
-## 現状 — `v0.1.0` core 実装済み
+## 現状 — core + graph substrate 実装済み (2-crate)
 
-ADR-0001 が 5 axes を framing。 core 3 axes は `accepted`・実装済み:
-ADR-0002 (Outcome ADT) / ADR-0003 (loop driver) / ADR-0004 (Bracket・Driver trait)。
-Axis D (graph 同型) / Axis E (CGP) は後続 (別 crate 想定)。
+ADR-0001 が 5 axes を framing。 A/B/C/D 実装済み:
+ADR-0002 (Outcome) / 0003 (loop driver) / 0004 (Bracket・Driver) が core (`club-nostos`)、
+ADR-0005/0007 (graph substrate) + ADR-0008 が `club-nostos-graph` crate。
+5 axes 外に ADR-0006 (Voyage = 往相 + 還相 の頂点型)。
+残るは Axis E (CGP integration、 別 crate 想定)。
 新しい設計判断は `docs/adr/` に記録してから着手する。
 
 ## 命名規則 (chronista-club ecosystem)
@@ -32,11 +34,13 @@ Axis D (graph 同型) / Axis E (CGP) は後続 (別 crate 想定)。
 
 ## アーキテクチャ scope
 
-- **Bracket** — `enter` / `active` / `exit` の lifecycle primitive
-- **Outcome ADT** — `Done(O)` / `Reborn(I)` / `Failed(E)` の帰還三相
-- lifecycle ↔ loop dual view / node graph editor との同型 substrate / CGP-style component composition
+- **Bracket** — `enter` / Active / `exit` の lifecycle primitive (`club-nostos`)
+- **Outcome ADT** — `Done(O)` / `Reborn(I)` / `Failed(E)` の帰還三相 / **Voyage** — `OneWay` (往相) を足した頂点型
+- **lifecycle ↔ loop dual view** — `drive` / `Driver`
+- **graph 同型 substrate** — `club-nostos-graph` (`Node` / `Graph`、 再帰三軸 時間/空間/深さ)
+- CGP-style component composition — 後続 (Axis E)
 
-詳細と設計 axes は [`docs/adr/0001-bracket-and-outcome.md`](docs/adr/0001-bracket-and-outcome.md)。
+詳細と設計 axes は [`docs/adr/`](docs/adr/) (ADR-0001〜0008)。
 
 ## テスト
 
