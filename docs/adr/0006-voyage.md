@@ -47,6 +47,8 @@ pub enum Voyage<O, I, E> {
 
 ### D3 — `nostos-core` の `OneWay` は bare (payload 無し)
 
+> ⚠ **部分 supersede** ([ADR-0008](0008-oneway-payload-and-spread.md)、 2026-05-19): nostos-graph 実装が 「bare な `OneWay` は fan-out で値を運べない」 隙間を露出。 ADR-0008 D1 が **`OneWay` に payload を持たせる** (`OneWay(O)`) ── 本 D3 の 「bare」 部分は撤回。 ただし 「`Spread` (拡散) は `nostos-graph` の責務」 という判断は ADR-0008 D3 が引き継ぎ、 有効。
+
 `OneWay` は core では値を持たない。
 
 「往ったものが構造を *さらに伝播* してよいか」 (= 拡散) という問いは存在するが、 それは **node 構造 (topology) を前提**にする問いであり、 単一の旅の lifecycle を扱う `nostos-core` の領分ではない。 `nostos-core` は `no_std` / dependency-free を保つ ([ADR-0005](0005-graph-substrate.md) D3)。
