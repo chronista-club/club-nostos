@@ -145,4 +145,29 @@ mod tests {
         // enter(0) → exit → Done(0)。 next は呼ばれない。
         assert_eq!(block_on(d.run(&Countdown, 0)), Outcome::Done(0));
     }
+
+    #[test]
+    fn run_reaches_failed() {
+        // exit が Failed を返したら run は即終端する (sync driver_reaches_failed と対称)。
+        struct AlwaysFail;
+        impl AsyncBracket for AlwaysFail {
+            type Input = ();
+            type Active = ();
+            type Done = ();
+            type Reborn = ();
+            type Failed = &'static str;
+            async fn enter(&self, _input: ()) {}
+            async fn exit(&self, _active: ()) -> Outcome<(), (), &'static str> {
+                Outcome::Failed("nope")
+            }
+        }
+        struct AnyDriver;
+        impl AsyncDriver<AlwaysFail> for AnyDriver {
+            async fn next(&mut self, reborn: ()) -> Result<(), ()> {
+                Ok(reborn)
+            }
+        }
+        let mut d = AnyDriver;
+        assert_eq!(block_on(d.run(&AlwaysFail, ())), Outcome::Failed("nope"));
+    }
 }

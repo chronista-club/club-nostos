@@ -50,7 +50,7 @@ pub use driver::Driver;
 pub use outcome::{Cycle, Outcome};
 pub use voyage::Voyage;
 
-/// 依存ゼロの最小 `block_on` ── test 専用 (1.85 stable の [`core::task::Waker::noop`] を使う)。
+/// 依存ゼロの最小 `block_on` ── test 専用 (stable な [`core::task::Waker::noop`] を使う)。
 ///
 /// test future は実 I/O を持たず即時 `Ready` になるため、 単純な poll ループで足りる。
 #[cfg(test)]
