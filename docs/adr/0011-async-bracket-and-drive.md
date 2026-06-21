@@ -122,18 +122,20 @@ toolchain 前提のとおり、 stable 1.95 に `Send` 境界の記法 (RTN) は
 
 却下: core が `trait_variant` で `Send` 版も提供する案 ── 依存を 1 つ許容して consumer の手間を省くトレードオフだが、 「依存ゼロ」 を優先して却下。 RTN が将来 stable 化すれば、 core で `Send` 境界を無依存に書けるようになり本判断は再考の余地が出る。
 
-**VP 実態 (2026-06-22)**: VP review 当初は 「concrete bracket を inline drive する限り `Send` は compiler 推論で足り `trait_variant` 不要」 だったが、 Bastet 確定で **実際に `trait_variant` を被せる**方向に硬化 ── registry が device を `await` 跨ぎで保持 + `dyn` 保管するため `Send` を名指す必要が出る (D8)。 D7 の 「consumer 側で `Send`」 方針は正しいまま、 VP は trait_variant を実利用する。
+**VP 実態 (2026-06-22, 最終)**: dyn 不要が確定した (D8) ことで、 VP は **concrete `MidiDeviceBracket` を inline drive する** ── この限り `Send` は **compiler 推論で足り、 `trait_variant` は不要**な見込みに戻った (registry が保持するのは uniform な `Active = ConnectedDevice` であって `dyn` ではない)。 `trait_variant` が要るのは将来 dyn を使う時 (D8) のみ。 D7 の 「`Send` は consumer 側」 方針は不変で、 当面 consumer の手間も最小。
 
-### D8 — dyn 対応は `alloc` feature 裏の boxed variant (Bastet 駆動)
+### D8 — dyn 対応 = `alloc` feature 裏の boxed variant (将来枠、 `0.2.0` critical path 外)
 
-Bastet registry は heterogeneous な device を `Box<dyn DeviceInput + Send>` で保持する (`bastet.rs:78`)。 複数機種の device `AsyncBracket` を 1 つの registry に抱えるため **`dyn AsyncBracket` が要る** ── D-OPEN-1 は当初 「dyn 不要見込み」 だったが real-need で **dyn 必須に反転**。
+**経緯の訂正 (2026-06-22, VP 再訂正)**: VP は一旦 「Bastet registry が heterogeneous device を `dyn` 保持するので `dyn AsyncBracket` 必須」 と回答したが、 これは **過剰訂正**だった。 指していた `bastet.rs:78 Box<dyn DeviceInput + Send>` は **sync の input parser の dyn** (byte→event、 `AsyncBracket` とは無関係) で、 device lifecycle 自体は **uniform/concrete にできる** (下記 「0.2.0 critical path と Bastet concrete shape」)。 → **`dyn AsyncBracket` は VP の critical path では不要**。
 
-dyn = **boxing 必須** (`Pin<Box<dyn Future>>` ── 戻り future は impl 毎に型もサイズも違うので vtable に直接載らず、 箱詰めで型消去するしかない)。 そして `Box` は **`alloc` を要求**する。 よって `0.2.0` の層構成:
+ただし dyn 対応は将来枠として価値が残る ── **非 MIDI device (ESP32/network 等) を同 registry に混ぜ `Active` 型が機種で別になる**なら、 そこで初めて heterogeneous `Active` の型消去に `dyn AsyncBracket` が要る。 MIDI 艦隊だけなら uniform/concrete で済む。 よって **D8 は good-to-have / 後追いとし、 `0.2.0` を塞がない**。
 
-- **core default** = bare `AsyncBracket` (AFIT, `no_std`, alloc なし, `Send` 境界なし) ── Bastet が個々の device を inline drive する分はこれで足りる。
-- **`alloc` feature** 裏に object-safe な **`DynAsyncBracket`** (boxed) を置く ── registry の `dyn` 保管用。 `alloc` は std 提供で**第三者依存ではない**ため **依存ゼロは保持** (no_std-without-alloc 純粋性のみ feature 時に緩む)。
+以下は将来実装する場合の設計 (保持)。 dyn = **boxing 必須** (`Pin<Box<dyn Future>>` ── 戻り future は impl 毎に型もサイズも違うので vtable に直接載らず、 箱詰めで型消去するしかない)。 `Box` は **`alloc` を要求**するので:
 
-shape (draft ── VP `bastet.rs` と擦り合わせる叩き台):
+- **core default** = bare `AsyncBracket` (AFIT, `no_std`, alloc なし, `Send` 境界なし) ── ここまでが `0.2.0`。
+- **`alloc` feature** 裏に object-safe な **`DynAsyncBracket`** (boxed) を置く (後追い)。 `alloc` は std 提供で**第三者依存ではない**ため **依存ゼロは保持**。
+
+shape (将来実装の叩き台):
 
 ```rust
 #[cfg(feature = "alloc")]
@@ -173,20 +175,46 @@ pub trait DynAsyncBracket {
 
 ## Resolved Questions (VP review 2026-06-22 で回答)
 
-1. **D-OPEN-1 — dyn 互換性** → **要る (反転)**。 Bastet registry が heterogeneous device を `dyn` 保持するため `dyn AsyncBracket` が必須。 → **D8** (`alloc` feature 裏の boxed `DynAsyncBracket`) で対応。
+1. **D-OPEN-1 — dyn 互換性** → **不要 (2 度の訂正を経て確定)**。 一旦 「要る」 に反転したが、 VP 再訂正で device lifecycle は uniform/concrete (単一 `MidiDeviceBracket`、 `Active = ConnectedDevice`) と判明。 `dyn AsyncBracket` は VP critical path 外 ── 将来の heterogeneous device 枠として **D8 に後追いで保持**。
 2. **D-OPEN-2 — 命名** → **suffix 方式 (`drive_async` / `AsyncBracket`)、 `async` feature gate なし**。 async は AFIT で依存ゼロ追加のため feature gate しても得る物が無い (cfg 表面が増えるだけ)。 discoverability も suffix が素直。 (boxed variant のみ `alloc` gate ── D8。)
 3. **D-OPEN-3 — spawn_blocking vs async subprocess** → **nostos agnostic を確認**。 VP の device I/O は CoreMIDI notify (async) / midir open-close (sync) の混在、 destroy-side は `tokio::process` 寄り。 いずれも nostos は step を `AsyncFnMut` で受けるだけで非依存 ── どう回すかは **VP 内部選択**であり nostos の設計 driver ではない。
 4. **D-OPEN-4 — heal loop の責務分界** → **doc 規約に留め、 型強制しない**。 「reconcile 可能状態」 の定義は VP ドメイン依存 (lane/worktree/device の reconcile 意味論次第) で、 nostos が型で課すと over-constrain。 nostos は `Outcome` (Done/Reborn/Failed) の seam を提供し、 reconcile 意味論は consumer が定義する ── Minimum 原則と整合。
 
+## 0.2.0 critical path と Bastet concrete shape
+
+VP 再訂正で確定した **`0.2.0` の最小 critical path** (これだけで Bastet が載る):
+
+- **bare `AsyncBracket`** (AFIT、 `no_std`、 alloc なし、 `Send` 境界なし)
+- **`drive_async` / `drive_bounded_async`** (`AsyncFnMut(I) -> Outcome` step)
+- **`AsyncDriver`** (async `next` + default async `run`)
+
+→ `DynAsyncBracket` (D8)・`alloc` feature は **0.2.0 に含めない** (後追い)。
+
+Bastet が載せる concrete shape (擦り合わせ済 ── 単一 concrete 型、 機種差は data):
+
+```rust
+struct MidiDeviceBracket;          // device 共通の 1 型
+type Input  = DeviceDescriptor;    // displayName + kind/profile
+type Active = ConnectedDevice;     // 全機種 uniform (port 名 / in・out 有無 / connected_at)
+type Done   = ();
+type Reborn = DeviceDescriptor;    // hot-unplug → 同 descriptor 再接続 (reconnect heal loop)
+type Failed = ConnectError;
+// enter = port open + profile.handshake() / exit = close。 registry は HashMap<name, ConnectedDevice>。
+```
+
+機種差 (handshake / parse) は `DeviceProfile` / `DeviceInput` を **data として保持**し、 Bracket は単一 concrete 型に保つ ── nostos の Minimum 原則 (dyn より concrete + data) と一致。
+
 ## 着手条件 (D5 の規律) → 充足
 
-`accepted` (2026-06-22) かつ **real-need consumer (Bastet) 確定** で着手条件を充足。 VP は **nostos 先行** sequencing (`0.2.0` を先に出し Bastet を載せる) を選択。 → `0.2.0` 実装に進む。 concrete API (特に D8 の boxed variant shape) は VP `bastet.rs` の実コードと擦り合わせて確定する。
+`accepted` (2026-06-22) かつ **real-need consumer (Bastet) 確定** で着手条件を充足。 VP は **nostos 先行** sequencing を選択。 → 上記 critical path を `0.2.0` として実装に進む。
 
 ---
 
 > **draft note** (2026-06-21): VP handoff (PR #572 完了報告への返答) を受けた framing draft。 sync で proven な Outcome/Bracket/drive を、 no_std/依存ゼロ・additive を保ったまま async へ持ち上げる方針。 D1 (別 `AsyncBracket` trait via AFIT)・D6 (RAII の async 境界)・D7 (`Send` は consumer 側) が擦り合わせの核。
 >
-> **accepted note** (2026-06-22): VP review で D7 go / D1・D6 同意 / D-OPEN 全回答。 さらに **real-need consumer (Bastet MIDI device lifecycle、 ユーザー承認済) が確定**し、 VP は nostos 先行 sequencing を選択 ── `accepted` 化。 D8 (dyn = `alloc` feature 裏の boxed `DynAsyncBracket`) を追加し `0.2.0` 実装へ。 boxed variant の blanket impl は stable 制約 (RTN 不在) で書けないため、 手書き boxed idiom (案 A) から着手し `bastet.rs` と擦り合わせる。
+> **accepted note** (2026-06-22): VP review で D7 go / D1・D6 同意 / D-OPEN 全回答。 さらに **real-need consumer (Bastet MIDI device lifecycle、 ユーザー承認済) が確定**し、 VP は nostos 先行 sequencing を選択 ── `accepted` 化。
+>
+> **訂正 note** (2026-06-22, 同日): VP が dyn 回答を再訂正 ── `bastet.rs:78` の `dyn` は sync parser のもので `AsyncBracket` 無関係、 device lifecycle は uniform/concrete (`Active = ConnectedDevice`)。 → **`0.2.0` critical path = bare `AsyncBracket` + `drive_async`/`drive_bounded_async` + `AsyncDriver` のみ**。 D8 (`DynAsyncBracket`/`alloc`) は **将来枠に降格** (非 MIDI device で `Active` が heterogeneous になる時)、 `0.2.0` を塞がない。 D7 の Send も concrete inline drive で推論される見込みに緩和。
 >
 > **裏どり** (2026-06-21): toolchain 前提を web で検証。 AFIT (1.75) / AsyncFn family (1.85) は stable、 **RTN (Send 境界) と AsyncDrop は未 stable** を確認 ── これが D7 と D6 の根拠。 sources: [RTN 標準化 PR #138424 (close)](https://github.com/rust-lang/rust/pull/138424) / [AsyncDrop tracking #126482](https://github.com/rust-lang/rust/issues/126482) / [AsyncDrop+Drop 必須 #142606](https://github.com/rust-lang/rust/pull/142606) / [AFIT announce](https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits/)。
 >
