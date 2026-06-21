@@ -1,10 +1,10 @@
 # ADR-0011 — async Bracket / drive の framing
 
-> **Status**: `proposed` (2026-06-21、 VP との擦り合わせ待ち)
-> **Date**: 2026-06-21
+> **Status**: `accepted` (2026-06-22、 VP review go + Bastet real-need 確認)
+> **Date**: 2026-06-21 (draft) / 2026-06-22 (accepted)
 > **Deciders**: mito (with claude Opus 4.8 as conversation partner)
 > **Builds on**: [ADR-0002](0002-outcome-adt.md) (Outcome) / [ADR-0003](0003-lifecycle-loop-dual.md) (drive) / [ADR-0004](0004-bracket-and-driver.md) (Bracket / Driver)
-> **Consumer signal**: Vantage Point destroy-side reclaim (doc 24 §4.6) — VP PR #572 完了報告で要請
+> **Consumer signal**: VP **Bastet** (MIDI device lifecycle、 real-need・ユーザー承認済) — 加えて destroy-side reclaim (doc 24 §4.6)
 
 > **番号について**: `ADR-0010` は [ADR-0009](0009-cgp-integration.md) が `nostos-cgp` concrete 用に予約済み。 本件 (async) は別軸のため 0011 を充てる。
 
@@ -22,11 +22,17 @@ txn{destroying} → external{ground + tmux reclaim} → txn{remove}
 
 `external` op が **async** ── `git worktree remove` / `tmux kill-session` (spawn_blocking or async subprocess)、 さらに boot reconcile heal loop も async (DB + FS check を await)。 sync `Bracket` ではこの lifecycle を表現できない。
 
-### signal 強度の honest な評価
+### signal 強度 ── real-need 確定 (2026-06-22 更新)
 
-VP destroy-side の **コードはまだ未実装**。 本 ADR は 「VP が destroy-side を書き始める前に async の shape を決めておく」 framing である。 これは [ADR-0009](0009-cgp-integration.md) が park した CGP (signal ゼロ) とは異なる ── consumer は doc 24 §4.6 で **op レベルまで具体化済**で、 bracket/retry の shape は後で変えると rework コストが高い。 「shape を先に決める」 ことが投機ではなく **de-risk** である、 というのが着手判断の根拠 (D5)。
+draft 時点 (2026-06-21) は destroy-side reclaim (doc 24 §4.6) を **文書化済みだが未コードの intent** signal として framing していた。 その後 VP review で **より早く立つ real-need consumer が確定**した:
 
-実装 (`0.2.0`) は本 ADR 合意後。 本 ADR は設計判断の framing に留め、 concrete な API 確定は VP destroy-side の実コードと擦り合わせる。
+**VP Bastet ── MIDI device lifecycle** (ユーザー承認済):
+- device 接続 = `AsyncBracket` (`enter` = in/out port open + handshake / `exit` = close)
+- registry = **reconnect heal loop** (hot-plug event で known device を再接続)
+- World (TheWorld) lifecycle に **enclose** = 「閉じ込める」 を型で表現
+- discovery は time-based poll を廃し **CoreMIDI notify (event-driven)** へ → `await` するため **async Bracket が必須**
+
+これは destroy-side より先に立つ async-Bracket consumer であり、 signal は 「文書化 intent」 から **「ユーザー承認済みの real-need」 に格上げ**された ([ADR-0009](0009-cgp-integration.md) の consumer-signal-driven 規律を満たす)。 VP は **nostos 先行** sequencing を選択 (`0.2.0` を先に出し、 その上に Bastet を載せる) → 本 ADR を `accepted` 化し `0.2.0` 実装に進む。 concrete API は **Bastet の実コード (`bastet.rs`) と擦り合わせて確定**する。
 
 ### toolchain の前提 (channel 1.95、 2026-06-21 裏どり済み)
 
@@ -116,38 +122,73 @@ toolchain 前提のとおり、 stable 1.95 に `Send` 境界の記法 (RTN) は
 
 却下: core が `trait_variant` で `Send` 版も提供する案 ── 依存を 1 つ許容して consumer の手間を省くトレードオフだが、 「依存ゼロ」 を優先して却下。 RTN が将来 stable 化すれば、 core で `Send` 境界を無依存に書けるようになり本判断は再考の余地が出る。
 
+**VP 実態 (2026-06-22)**: VP review 当初は 「concrete bracket を inline drive する限り `Send` は compiler 推論で足り `trait_variant` 不要」 だったが、 Bastet 確定で **実際に `trait_variant` を被せる**方向に硬化 ── registry が device を `await` 跨ぎで保持 + `dyn` 保管するため `Send` を名指す必要が出る (D8)。 D7 の 「consumer 側で `Send`」 方針は正しいまま、 VP は trait_variant を実利用する。
+
+### D8 — dyn 対応は `alloc` feature 裏の boxed variant (Bastet 駆動)
+
+Bastet registry は heterogeneous な device を `Box<dyn DeviceInput + Send>` で保持する (`bastet.rs:78`)。 複数機種の device `AsyncBracket` を 1 つの registry に抱えるため **`dyn AsyncBracket` が要る** ── D-OPEN-1 は当初 「dyn 不要見込み」 だったが real-need で **dyn 必須に反転**。
+
+dyn = **boxing 必須** (`Pin<Box<dyn Future>>` ── 戻り future は impl 毎に型もサイズも違うので vtable に直接載らず、 箱詰めで型消去するしかない)。 そして `Box` は **`alloc` を要求**する。 よって `0.2.0` の層構成:
+
+- **core default** = bare `AsyncBracket` (AFIT, `no_std`, alloc なし, `Send` 境界なし) ── Bastet が個々の device を inline drive する分はこれで足りる。
+- **`alloc` feature** 裏に object-safe な **`DynAsyncBracket`** (boxed) を置く ── registry の `dyn` 保管用。 `alloc` は std 提供で**第三者依存ではない**ため **依存ゼロは保持** (no_std-without-alloc 純粋性のみ feature 時に緩む)。
+
+shape (draft ── VP `bastet.rs` と擦り合わせる叩き台):
+
+```rust
+#[cfg(feature = "alloc")]
+pub trait DynAsyncBracket {
+    type Input; type Active; type Done; type Reborn; type Failed;
+    fn enter<'a>(&'a self, input: Self::Input)
+        -> Pin<Box<dyn Future<Output = Self::Active> + Send + 'a>>;
+    fn exit<'a>(&'a self, active: Self::Active)
+        -> Pin<Box<dyn Future<Output = Outcome<Self::Done, Self::Reborn, Self::Failed>> + Send + 'a>>;
+}
+```
+
+**未決の核 (VP と叩く)**: bare `AsyncBracket` → `DynAsyncBracket` への **blanket impl が stable では書けない** ── blanket には 「`enter` の戻り future が `Send`」 と書く必要があるが、 その境界記法 (RTN) が未 stable (D7)。 → 2 案:
+
+- **(A) 手書き boxed idiom**: VP が device 型に `DynAsyncBracket` を直接 impl (`Box::pin(async move { … })` 数行)。 stable で確実に動き、 core は依存ゼロのまま。 VP に少量の boilerplate。
+- **(B) consumer-side trait_variant bridge**: VP が `trait_variant` で `Send` 版 `AsyncBracket` を生成 → core が 「`Send` 版からの blanket impl」 を提供。 boilerplate は減るが、 core と VP マクロの境界調整が要る。
+
+**推奨は (A) から**着手 (最小・確実)、 `bastet.rs` の実装感触を見て (B) を検討。 `Send` は D7 どおり consumer 側で担保する。
+
 ## Consequences
 
 ### Positive
-- VP destroy-side reclaim (doc 24 §4.6) の `destroying` lifecycle が型で表現できる。
+- VP **Bastet** の MIDI device lifecycle (enclose / reconnect heal loop) が型で表現できる ── real-need を満たす。 destroy-side reclaim (doc 24 §4.6) も同じ substrate に乗る。
 - async が **2 つ目の consumer** として bracket/Outcome 抽象の generality を裏取りする。
-- `async-trait` crate 不要 (AFIT/AsyncFn) ── core の no_std / 依存ゼロを維持。
+- `async-trait` crate 不要 (AFIT/AsyncFn) ── core default の no_std / 依存ゼロを維持。
 - sync API 無変更 ── VP worktree retry を壊さない (additive `0.2.0`)。
 
 ### Negative
 - trait が sync/async で二重化 (`Bracket` / `AsyncBracket`、 `Driver` / `AsyncDriver`)。 共通ロジックの重複が生じうる。
-- AFIT は dyn 非互換 ── `dyn AsyncBracket` が要る consumer が出たら別途対応 (D-OPEN-1)。
+- dyn 対応 (D8) は `alloc` feature を要し、 かつ stable では bare AFIT → `DynAsyncBracket` の blanket impl が書けない ── consumer に手書き boxed idiom (案 A) の boilerplate を要求する。
 - `Send` 境界の記法 (RTN) が stable に無い (D7) ── multithread executor で回す consumer は `trait_variant` を被せる手間を負う。 core の依存ゼロとのトレードオフで consumer 側に倒した。
 - RAII 契約が async で弱まる (D6) ── 利用者に 「heal loop 前提」 の理解を要求する。
 
 ### Neutral
-- 具体 API (命名・shape) は VP destroy-side の実コードと擦り合わせて `0.2.0` 実装時に確定。
+- `0.2.0` の concrete API (特に D8 boxed variant の shape・blanket 案 A/B) は VP `bastet.rs` の実コードと擦り合わせて確定。
 - effect-generic は将来 (stable + signal) に再考の余地を残す。
 
-## Open Questions (VP / 実装前に詰める)
+## Resolved Questions (VP review 2026-06-22 で回答)
 
-1. **D-OPEN-1 — dyn 互換性**: VP は `dyn AsyncBracket` を要するか? 不要なら AFIT 直書きで済む (VP は具体型を駆動するので不要の見込み)。 要るなら `Box<dyn Future>` への boxing が要る ── consumer 側で包むか、 core が boxed variant を提供するか。 (`Send` 境界の扱いは D7 で決定済み。)
-2. **D-OPEN-2 — 命名**: `drive_async` / `AsyncBracket` suffix 方式か、 `nostos::r#async` module 分離か、 cargo feature (`async`) gate か。 discoverability と no_std 維持のバランス。
-3. **D-OPEN-3 — spawn_blocking vs async subprocess**: `git worktree remove` を VP がどちらで回すかで step の `await` 形が変わる。 nostos は step を `AsyncFnMut` で受けるだけなので非依存のはずだが要確認。
-4. **D-OPEN-4 — heal loop の責務分界 (D6)**: reconcile-可能状態の最小契約を nostos が型で課すか、 doc 規約に留めるか。
+1. **D-OPEN-1 — dyn 互換性** → **要る (反転)**。 Bastet registry が heterogeneous device を `dyn` 保持するため `dyn AsyncBracket` が必須。 → **D8** (`alloc` feature 裏の boxed `DynAsyncBracket`) で対応。
+2. **D-OPEN-2 — 命名** → **suffix 方式 (`drive_async` / `AsyncBracket`)、 `async` feature gate なし**。 async は AFIT で依存ゼロ追加のため feature gate しても得る物が無い (cfg 表面が増えるだけ)。 discoverability も suffix が素直。 (boxed variant のみ `alloc` gate ── D8。)
+3. **D-OPEN-3 — spawn_blocking vs async subprocess** → **nostos agnostic を確認**。 VP の device I/O は CoreMIDI notify (async) / midir open-close (sync) の混在、 destroy-side は `tokio::process` 寄り。 いずれも nostos は step を `AsyncFnMut` で受けるだけで非依存 ── どう回すかは **VP 内部選択**であり nostos の設計 driver ではない。
+4. **D-OPEN-4 — heal loop の責務分界** → **doc 規約に留め、 型強制しない**。 「reconcile 可能状態」 の定義は VP ドメイン依存 (lane/worktree/device の reconcile 意味論次第) で、 nostos が型で課すと over-constrain。 nostos は `Outcome` (Done/Reborn/Failed) の seam を提供し、 reconcile 意味論は consumer が定義する ── Minimum 原則と整合。
 
-## 着手条件 (D5 の規律)
+## 着手条件 (D5 の規律) → 充足
 
-本 ADR が `accepted` になり、 かつ VP destroy-side の実コード (or 直近の着手) が確認できた時点で `0.2.0` 実装に進む。 それまでは framing として保持 ── async API は 「VP が destroy-side を書く時」 に実需と擦り合わせて確定する。
+`accepted` (2026-06-22) かつ **real-need consumer (Bastet) 確定** で着手条件を充足。 VP は **nostos 先行** sequencing (`0.2.0` を先に出し Bastet を載せる) を選択。 → `0.2.0` 実装に進む。 concrete API (特に D8 の boxed variant shape) は VP `bastet.rs` の実コードと擦り合わせて確定する。
 
 ---
 
-> **draft note** (2026-06-21): VP handoff (PR #572 完了報告への返答) を受けた framing draft。 sync で proven な Outcome/Bracket/drive を、 no_std/依存ゼロ・additive を保ったまま async へ持ち上げる方針。 D1 (別 `AsyncBracket` trait via AFIT)・D6 (RAII の async 境界)・D7 (`Send` は consumer 側) が擦り合わせの核。 `accepted` 化と実装着手は VP destroy-side の実需確認後。
+> **draft note** (2026-06-21): VP handoff (PR #572 完了報告への返答) を受けた framing draft。 sync で proven な Outcome/Bracket/drive を、 no_std/依存ゼロ・additive を保ったまま async へ持ち上げる方針。 D1 (別 `AsyncBracket` trait via AFIT)・D6 (RAII の async 境界)・D7 (`Send` は consumer 側) が擦り合わせの核。
+>
+> **accepted note** (2026-06-22): VP review で D7 go / D1・D6 同意 / D-OPEN 全回答。 さらに **real-need consumer (Bastet MIDI device lifecycle、 ユーザー承認済) が確定**し、 VP は nostos 先行 sequencing を選択 ── `accepted` 化。 D8 (dyn = `alloc` feature 裏の boxed `DynAsyncBracket`) を追加し `0.2.0` 実装へ。 boxed variant の blanket impl は stable 制約 (RTN 不在) で書けないため、 手書き boxed idiom (案 A) から着手し `bastet.rs` と擦り合わせる。
+>
+> **裏どり** (2026-06-21): toolchain 前提を web で検証。 AFIT (1.75) / AsyncFn family (1.85) は stable、 **RTN (Send 境界) と AsyncDrop は未 stable** を確認 ── これが D7 と D6 の根拠。 sources: [RTN 標準化 PR #138424 (close)](https://github.com/rust-lang/rust/pull/138424) / [AsyncDrop tracking #126482](https://github.com/rust-lang/rust/issues/126482) / [AsyncDrop+Drop 必須 #142606](https://github.com/rust-lang/rust/pull/142606) / [AFIT announce](https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits/)。
 >
 > **裏どり** (2026-06-21): toolchain 前提を web で検証。 AFIT (1.75) / AsyncFn family (1.85) は stable、 **RTN (Send 境界) と AsyncDrop は未 stable** を確認 ── これが D7 と D6 の根拠。 sources: [RTN 標準化 PR #138424 (close)](https://github.com/rust-lang/rust/pull/138424) / [AsyncDrop tracking #126482](https://github.com/rust-lang/rust/issues/126482) / [AsyncDrop+Drop 必須 #142606](https://github.com/rust-lang/rust/pull/142606) / [AFIT announce](https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits/)。
 </content>
