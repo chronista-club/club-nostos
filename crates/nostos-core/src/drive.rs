@@ -71,6 +71,138 @@ where
     Outcome::Reborn(input)
 }
 
+/// [`drive`] の async 版。 step を `AsyncFnMut` で受け、 各 step を await しながら駆動する。
+///
+/// 制御フローは [`drive`] と同一 ── `Reborn` が続く限り step を呼び、 `Done` / `Failed`
+/// で終端して `Result<O, E>` に収束する。 step が async である点だけが異なる。
+///
+/// # Examples
+///
+/// ```
+/// use nostos::{drive_async, Outcome};
+///
+/// # async fn _demo() {
+/// // 0 → 1 → 2 と Reborn、 3 で Done。
+/// let result: Result<i32, ()> = drive_async(0, |x| async move {
+///     if x < 3 { Outcome::Reborn(x + 1) } else { Outcome::Done(x) }
+/// }).await;
+/// assert_eq!(result, Ok(3));
+/// # }
+/// ```
+pub async fn drive_async<O, I, E, F>(initial: I, mut step: F) -> Result<O, E>
+where
+    F: AsyncFnMut(I) -> Outcome<O, I, E>,
+{
+    let mut input = initial;
+    loop {
+        match step(input).await {
+            Outcome::Done(o) => return Ok(o),
+            Outcome::Reborn(i) => input = i,
+            Outcome::Failed(e) => return Err(e),
+        }
+    }
+}
+
+/// [`drive_bounded`] の async 版。 step を最大 `max_steps` 回 await しながら呼ぶ。
+///
+/// 戻り値が `Outcome` (三相のまま) なのは [`drive_bounded`] と同じ ── `max_steps` 回で
+/// `Reborn` が続けば最後の `Reborn(i)` を返し、 「上限で中断、 `i` から再開可能」 を表す。
+///
+/// # Examples
+///
+/// ```
+/// use nostos::{drive_bounded_async, Outcome};
+///
+/// # async fn _demo() {
+/// // 2 回で打ち切り、 最後の Reborn(2) が返る。
+/// let out: Outcome<i32, i32, ()> =
+///     drive_bounded_async(0, 2, |x| async move { Outcome::Reborn(x + 1) }).await;
+/// assert_eq!(out, Outcome::Reborn(2));
+/// # }
+/// ```
+pub async fn drive_bounded_async<O, I, E, F>(
+    initial: I,
+    max_steps: usize,
+    mut step: F,
+) -> Outcome<O, I, E>
+where
+    F: AsyncFnMut(I) -> Outcome<O, I, E>,
+{
+    let mut input = initial;
+    for _ in 0..max_steps {
+        match step(input).await {
+            done @ Outcome::Done(_) => return done,
+            Outcome::Reborn(i) => input = i,
+            failed @ Outcome::Failed(_) => return failed,
+        }
+    }
+    Outcome::Reborn(input)
+}
+
+#[cfg(test)]
+mod async_tests {
+    use super::*;
+    use crate::block_on;
+
+    #[test]
+    fn drive_async_done_immediately() {
+        let result: Result<i32, ()> = block_on(drive_async(1, |x| async move { Outcome::Done(x) }));
+        assert_eq!(result, Ok(1));
+    }
+
+    #[test]
+    fn drive_async_reborn_then_done() {
+        let result: Result<i32, ()> = block_on(drive_async(0, |x| async move {
+            if x < 3 {
+                Outcome::Reborn(x + 1)
+            } else {
+                Outcome::Done(x)
+            }
+        }));
+        assert_eq!(result, Ok(3));
+    }
+
+    #[test]
+    fn drive_async_reborn_then_failed() {
+        let result: Result<i32, &str> = block_on(drive_async(0, |x| async move {
+            if x < 2 {
+                Outcome::Reborn(x + 1)
+            } else {
+                Outcome::Failed("stop")
+            }
+        }));
+        assert_eq!(result, Err("stop"));
+    }
+
+    #[test]
+    fn drive_bounded_async_done_within_limit() {
+        let out: Outcome<i32, i32, ()> = block_on(drive_bounded_async(0, 10, |x| async move {
+            if x < 3 {
+                Outcome::Reborn(x + 1)
+            } else {
+                Outcome::Done(x)
+            }
+        }));
+        assert_eq!(out, Outcome::Done(3));
+    }
+
+    #[test]
+    fn drive_bounded_async_interrupted_at_limit() {
+        let out: Outcome<i32, i32, ()> = block_on(drive_bounded_async(0, 3, |x| async move {
+            Outcome::Reborn(x + 1)
+        }));
+        assert_eq!(out, Outcome::Reborn(3));
+    }
+
+    #[test]
+    fn drive_bounded_async_zero_steps_returns_initial() {
+        let out: Outcome<i32, i32, ()> = block_on(drive_bounded_async(42, 0, |x| async move {
+            Outcome::Reborn(x + 1)
+        }));
+        assert_eq!(out, Outcome::Reborn(42));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
