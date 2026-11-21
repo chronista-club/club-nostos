@@ -7,7 +7,6 @@ description = "Node graph substrate for nostos — Bracket を node、 Voyage �
 keywords = ["graph", "node", "bracket", "lifecycle", "nostos"]
 categories = ["rust-patterns", "data-structures"]
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 readme = "../../README.md"
 rust-version.workspace = true

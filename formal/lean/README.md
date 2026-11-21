@@ -97,5 +97,8 @@ Rust のテストは引き続き必要。
 「n + m 回まとめて進める」が一致する性質が考えられる。
 その際は `FnMut` の内部状態をどう表すかも決める必要がある。
 
+実際の Rust と証明をつなぐ次の実験は、
+[`Outcome` の判定・取り出し6メソッドの自動変換と証明](../aeneas/README.md) を参照。
+
 公式入門: [Theorem Proving in Lean 4](https://lean-lang.org/theorem_proving_in_lean4/)、
 [場合分けと帰納的な型](https://lean-lang.org/theorem_proving_in_lean4/Inductive-Types/)。
