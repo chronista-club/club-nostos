@@ -7,7 +7,6 @@ description = "Bracket / lifecycle / Outcome primitives for Rust. Climb the ladd
 keywords = ["bracket", "lifecycle", "outcome", "adt", "graph"]
 categories = ["rust-patterns", "data-structures"]
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 readme = "../../README.md"
 rust-version.workspace = true
