@@ -1,6 +1,6 @@
 # ADR-0012: Lean による Outcome の小さな証明実験
 
-Status: experimental（ローカル spike）
+Status: experimental（Lean モデルによる検証実験）
 
 ## Context
 
